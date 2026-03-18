@@ -46,8 +46,8 @@ let availableDesignators: string[] = [];
 async function init() {
   try {
     const [mapRes, bldgRes] = await Promise.all([
-      fetch("/uoft_map.geojson"),
-      fetch("/building.csv"),
+      fetch(`${import.meta.env.BASE_URL}uoft_map.geojson`),
+      fetch(`${import.meta.env.BASE_URL}building.csv`),
     ]);
 
     if (!mapRes.ok || !bldgRes.ok) throw new Error("Base data fetch failed");
@@ -75,7 +75,7 @@ async function loadYearData(year: string) {
   errorStatus.style.display = "none";
 
   try {
-    const res = await fetch(`/courses_${year}.json`);
+    const res = await fetch(`${import.meta.env.BASE_URL}courses_${year}.json`);
     if (!res.ok) throw new Error(`Could not load ${year} data`);
     const data: AcademicYear = await res.json();
 
