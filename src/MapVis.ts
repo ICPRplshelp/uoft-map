@@ -207,14 +207,6 @@ export class UofTMapVis {
       .on("start", () => {
         this.svg.classed("grabbing", true);
         this.svg.style("cursor", "grabbing");
-        
-        // Immediately wipe tooltip and un-highlight during drag
-        if (this.hoveredNode) {
-            const oldGroup = this.container.select(`#${this.getSafeId(this.hoveredNode.id)}`);
-            oldGroup.select(".visible-bubble").style("filter", null).attr("stroke", "#333").attr("stroke-width", 0.5);
-            this.hoveredNode = null;
-        }
-        this.tooltip.style("opacity", 0);
         window.dispatchEvent(new Event('close-all-suggestions')); 
       })
       .on("end", () => {
@@ -552,16 +544,13 @@ export class UofTMapVis {
     bubblesEnter
       .append("text")
       .attr("text-anchor", "middle")
-      .attr("dy", "0.35em")
+      .attr("dominant-baseline", "central")
       .style("pointer-events", "none")
       .style("opacity", 0)
       .style("font-size", "0px");
 
     const bubblesMerge = bubblesEnter.merge(bubbles);
     bubblesMerge.attr("id", (d) => this.getSafeId(d.id));
-
-    // Mouse events on specific bubbles removed completely; 
-    // Handled purely by the SVG proximity tracker above
 
     bubblesMerge
       .transition()

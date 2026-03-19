@@ -204,6 +204,14 @@ button { transition: background-color 0.1s; }
   background: #e0e0e0;
 }
 
+/* Tooltip width limit for narrower screens */
+.d3-tooltip {
+  max-width: min(300px, 80vw);
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   #sidebar {

@@ -180,8 +180,7 @@ function setupChipInput(
   const showSuggestions = () => {
     const query = inputEl.value.trim().toUpperCase();
     const matches = availableDesignators
-      .filter(s => s.includes(query))
-      .slice(0, 20);
+      .filter(s => s.includes(query)); // Removed the slice to show all
 
     if (matches.length > 0 && inputEl === document.activeElement) {
       suggEl.innerHTML = matches.map(m => {
