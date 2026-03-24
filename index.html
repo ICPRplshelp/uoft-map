@@ -10,6 +10,12 @@
   
   <div id="sidebar">
     <h2>UofT Course Location Bubble Map</h2>
+    <p class="help-text" style="padding-bottom: 0.2em;">
+      Where do courses typically occur? This visualization lets you see where courses 
+      typically occur based on department, breadth requirement, level, and academic division.
+      NOTE: locations are approximate and may not be precise.
+    </p>
+
     
     <div class="control-group">
       <label for="year-select">Academic Year</label>
@@ -60,7 +66,7 @@
           <button id="default-visible-desig" class="clear-btn">Defaults</button>
         </div>
       </div>
-      <p class="help-text">The first three letters of a course code corresponding to departments or academic units.</p>
+      <p class="help-text">The first three letters of a course code. If this is blank, nothing will show.</p>
       <div class="chip-input-container" id="visible-desig-container">
         <div id="visible-desig-chips" class="chips"></div>
         <input type="text" id="visible-desig-input" placeholder="Add another one..." autocomplete="off"/>
@@ -78,7 +84,7 @@
           <button id="clear-filter-desig" class="clear-btn">Clear all</button>
         </div>
       </div>
-      <p class="help-text">If applicable, only show bubbles from courses with these designators (first 3 letters).</p>
+      <p class="help-text">If applicable, only show bubbles from courses with these designators (first 3 letters).<br/><em>Note: Selecting none has the same effect as selecting all.</em></p>
       <div class="chip-input-container" id="filter-desig-container">
         <div id="filter-desig-chips" class="chips"></div>
         <input type="text" id="filter-desig-input" placeholder="MAT" autocomplete="off"/>
@@ -88,6 +94,7 @@
 
     <div class="control-group">
       <label>Breadth Requirement</label>
+      <p class="help-text"><em>Note: Selecting all or none has the same effect.</em></p>
       <div style="margin-bottom: 5px;"><label><input type="checkbox" id="filter-br-all"> <em> All</em></label></div>
       <div class="checkbox-grid">
         <label title="Creative and Cultural Representations"><input type="checkbox" name="filter-br" value="1"> BR=1</label>
@@ -101,6 +108,7 @@
 
     <div class="control-group">
       <label>Level</label>
+      <p class="help-text"><em>Note: Selecting all or none has the same effect.</em></p>
       <div style="margin-bottom: 5px;"><label><input type="checkbox" id="filter-level-all"> <em> All </em></label></div>
       <div class="checkbox-grid">
         <label><input type="checkbox" name="filter-level" value="1"> 100-level</label>
@@ -113,6 +121,11 @@
     </div>
 
     <hr/>
+    
+    <div class="control-group">
+      <label><input type="checkbox" id="rotate-map"> Display map upright</label>
+      <p class="help-text" style="margin-left: 20px;">Makes all roads axis-aligned</p>
+    </div>
 
     <div class="control-group">
       <label>Base Bubble Size on the total sum of...</label>
@@ -135,7 +148,7 @@
       <p class="help-text">Controls how zoomed in you need to be before text labels appear on the bubbles.</p>
     </div>
 
-    <div class="control-group">
+    <div class="control-group" id="concise-text-group">
       <label><input type="checkbox" id="concise-text" checked> Concise Labels</label>
       <p class="help-text" style="margin-left: 20px;">Breadth requirements display as "1" instead of "BR=1." Similar for other grouping modes.</p>
     </div>

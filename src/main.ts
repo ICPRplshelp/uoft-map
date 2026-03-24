@@ -139,7 +139,6 @@ function setupChipInput(
   }
 
   let values = [...initialValues];
-  // ... rest of the function remains identical ...
 
   const render = () => {
     chipsEl.innerHTML = '';
@@ -188,7 +187,7 @@ function setupChipInput(
   const showSuggestions = () => {
     const query = inputEl.value.trim().toUpperCase();
     const matches = availableDesignators
-      .filter(s => s.includes(query)); // Removed the slice to show all
+      .filter(s => s.includes(query)); 
 
     if (matches.length > 0 && inputEl === document.activeElement) {
       suggEl.innerHTML = matches.map(m => {
@@ -295,25 +294,63 @@ function setupChipInput(
 function setupEventListeners() {
   const toggle = document.getElementById("mobile-toggle");
   const sidebar = document.getElementById("sidebar");
-  toggle?.addEventListener("click", () => sidebar?.classList.toggle("open"));
+  
+  // Use pointerdown to beat D3's touch listeners to the punch
+  if (toggle) {
+      toggle.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation(); 
+        sidebar?.classList.toggle("open");
+      };
+    }
 
-  document.getElementById("year-select")?.addEventListener("change", (e) => {
-    loadYearData((e.target as HTMLSelectElement).value);
+  
+
+  
+  // 2. Keep pointerdown for the background click-away (iOS Safari needs this to detect taps on the body reliably)
+  // We name the function so we can remove the old one during Vite hot-reloads
+  const handleOutsideClick = (e: PointerEvent) => {
+    const target = e.target as Node;
+    
+    // Ignore if they tapped the toggle button itself (let the onclick handle it)
+    if (toggle?.contains(target)) return;
+
+    if (
+      window.innerWidth <= 768 &&
+      sidebar?.classList.contains("open") &&
+      !sidebar?.contains(target)
+    ) {
+      sidebar.classList.remove("open");
+    }
+  };
+
+  // Clean up old listener to prevent Vite HMR stacking, then add the new one
+  document.removeEventListener("pointerdown", handleOutsideClick as EventListener);
+  document.addEventListener("pointerdown", handleOutsideClick as EventListener);
+
+  const yearSelect = document.getElementById("year-select") as HTMLSelectElement;
+  yearSelect?.addEventListener("change", (e) => {
+    const newYear = (e.target as HTMLSelectElement).value;
+    loadYearData(newYear);
   });
+
 
   const groupSelect = document.getElementById("group-by") as HTMLSelectElement;
   const designatorConfig = document.getElementById("designator-config")!;
   const filterDesigGroup = document.getElementById("filter-desig-group")!;
+  const conciseGroup = document.getElementById("concise-text-group")!;
 
   const initialVal = groupSelect.value;
   designatorConfig.style.display = initialVal === "designator" ? "block" : "none";
   filterDesigGroup.style.display = initialVal === "designator" ? "none" : "block";
+  conciseGroup.style.display = (initialVal === "designator" || initialVal === "faculty") ? "none" : "block";
 
   groupSelect.addEventListener("change", (e) => {
     const val = (e.target as HTMLSelectElement).value;
     mapVis.groupBy = val;
     designatorConfig.style.display = val === "designator" ? "block" : "none";
     filterDesigGroup.style.display = val === "designator" ? "none" : "block";
+    conciseGroup.style.display = (val === "designator" || val === "faculty") ? "none" : "block";
     updateLegend();
     mapVis.wrangleData();
   });
@@ -378,6 +415,11 @@ function setupEventListeners() {
   document.getElementById("hide-text")?.addEventListener("change", (e) => {
     mapVis.hideText = (e.target as HTMLInputElement).checked;
     mapVis.updateLabels();
+  });
+
+  document.getElementById("rotate-map")?.addEventListener("change", (e) => {
+    mapVis.isRotated = (e.target as HTMLInputElement).checked;
+    mapVis.redrawMapAndNodes();
   });
 
   document.getElementById("btn-reset-zoom")?.addEventListener("click", () => {

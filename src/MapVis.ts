@@ -45,6 +45,7 @@ export class UofTMapVis {
   public minTextVisibilityThreshold: number = 12; 
   public hideText: boolean = false;
   public isConcise: boolean = true;
+  public isRotated: boolean = false;
   public visibleDesignators: string[] = [
     "MAT", "STA", "CSC", "PHY", "BIO", "AST",
     "ENG", "PHL", "LIN", "ECO", "SOC", "PSY",
@@ -75,6 +76,20 @@ export class UofTMapVis {
     "3": "#9b54ed",
     "4": "#d65f30",
     "5": "#6c6ce8",
+  };
+  private designatorColors: Record<string, string> = {
+    "MAT": "#60daff",
+    "STA": "#ee7b33",
+    "CSC": "#9541e9",
+    "PHY": "#7b95f3",
+    "BIO": "#9dff51",
+    "AST": "#3b38ff",
+    "ENG": "#dc405d",
+    "PHL": "#56c4f7",
+    "LIN": "#e1ffff",
+    "ECO": "#fabebe",
+    "SOC": "#d0b442",
+    "PSY": "#9df0ff",
   };
   private designatorColorScale = d3.scaleOrdinal(d3.schemeTableau10);
   private facultyColorScale = d3.scaleOrdinal(d3.schemeSet2);
@@ -336,6 +351,11 @@ export class UofTMapVis {
     this.zoomHandler.resetZoom();
   }
 
+  public redrawMapAndNodes() {
+    this.drawMap();
+    this.wrangleData();
+  }
+
   private drawMap() {
     const context = this.canvas.node()?.getContext("2d");
     if (!context) return;
@@ -348,6 +368,19 @@ export class UofTMapVis {
     const height = this.canvas.node()?.height || 0;
 
     context.clearRect(0, 0, width, height);
+
+    context.save();
+    
+    // Rotate canvas around the specified center point
+    if (this.isRotated) {
+      const centerNode = this.projection([-79.39653146576228, 43.66283102326167]);
+      if (centerNode) {
+        const [cx, cy] = centerNode;
+        context.translate(cx, cy);
+        context.rotate(15.700 * Math.PI / 180);
+        context.translate(-cx, -cy);
+      }
+    }
 
     const sortedFeatures = [...this.mapData.features].sort((a, b) => {
       type Ta = typeof a;
@@ -384,6 +417,8 @@ export class UofTMapVis {
         context.stroke();
       }
     });
+    
+    context.restore();
   }
 
   public updateData(newCourses: AcademicYear) {
@@ -475,7 +510,22 @@ export class UofTMapVis {
 
     aggregated.forEach((val, key) => {
       const bData = this.buildings.get(val.bCode)!;
-      const [tgtX, tgtY] = this.projection([bData.lng, bData.lat]) || [0, 0];
+      let [tgtX, tgtY] = this.projection([bData.lng, bData.lat]) || [0, 0];
+      
+      // Calculate new target coords if the map is rotated
+      if (this.isRotated) {
+        const centerNode = this.projection([-79.39653146576228, 43.66283102326167]);
+        if (centerNode) {
+          const [cx, cy] = centerNode;
+          const angle = 16.184 * Math.PI / 180;
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          const nx = (cos * (tgtX - cx)) - (sin * (tgtY - cy)) + cx;
+          const ny = (sin * (tgtX - cx)) + (cos * (tgtY - cy)) + cy;
+          tgtX = nx;
+          tgtY = ny;
+        }
+      }
 
       nodes.push({
         id: key,
@@ -589,16 +639,50 @@ export class UofTMapVis {
     const tw = tNode.offsetWidth;
     const th = tNode.offsetHeight;
     
-    let left = rect.left + window.scrollX + (rect.width / 2) + 15;
-    let top = rect.top + window.scrollY + (rect.height / 2) + 15;
+    const isNarrow = window.innerWidth <= 768;
+    const bubbleCenterX = rect.left + rect.width / 2;
+    const bubbleCenterY = rect.top + rect.height / 2;
+    const screenCenterX = window.innerWidth / 2;
 
-    if (left + tw > window.innerWidth + window.scrollX) left = left - tw - 40;
-    if (top + th > window.innerHeight + window.scrollY) top = top - th - 40;
+    const isCentered = Math.abs(bubbleCenterX - screenCenterX) < (window.innerWidth * 0.25);
 
-    this.tooltip.style("left", left + "px").style("top", top + "px");
+    if (isNarrow && isCentered) {
+        // Direct top/bottom positioning
+        let left = bubbleCenterX + window.scrollX - (tw / 2);
+        
+        // Keep tooltip within horizontal bounds
+        if (left < window.scrollX + 10) left = window.scrollX + 10;
+        if (left + tw > window.innerWidth + window.scrollX - 10) left = window.innerWidth + window.scrollX - tw - 10;
+
+        let top = rect.bottom + window.scrollY + 10; // Default to bottom
+        
+        // If it goes off the bottom of the screen, put it on top
+        if (top + th > window.innerHeight + window.scrollY - 10) {
+            top = rect.top + window.scrollY - th - 10;
+        }
+        
+        this.tooltip.style("left", left + "px").style("top", top + "px");
+    } else {
+        // Diagonal positioning
+        let left = bubbleCenterX + window.scrollX + 15;
+        let top = bubbleCenterY + window.scrollY + 15;
+
+        // Keep bounds
+        if (left + tw > window.innerWidth + window.scrollX) left = bubbleCenterX + window.scrollX - tw - 15;
+        if (top + th > window.innerHeight + window.scrollY) top = bubbleCenterY + window.scrollY - th - 15;
+
+        this.tooltip.style("left", left + "px").style("top", top + "px");
+    }
   }
 
   private getCategories(c: Course): string[] {
+    const facultyMap: Record<string, string> = {
+      "ARTSC": "A&S",
+      "APSC": "ENG",
+      "ARCLA": "ARC",
+      "MUSIC": "MUS"
+    };
+    
     if (this.groupBy === "breadth") {
       return c.breadths?.artsc?.map((b) => b.replace("BR=", "").trim()) || [];
     }
@@ -607,7 +691,7 @@ export class UofTMapVis {
       return this.visibleDesignators.includes(des) ? [des] : [];
     }
     if (this.groupBy === "faculty") {
-      return [c.faculty];
+      return [facultyMap[c.faculty]??c.faculty];
     }
     if (this.groupBy === "level") {
       const lvl = c.code.charAt(3);
@@ -624,10 +708,7 @@ export class UofTMapVis {
     if (this.groupBy === "level" && cat !== "-") {
       return concise ? cat : `${cat}00`;
     }
-    if (this.groupBy === "faculty" && concise) {
-      if (cat === "ARTSC") return "A&S";
-      if (cat === "APSC") return "ENG";
-    }
+    // Faculty and Designator labels remain unaffected by concise mode
     return cat;
   }
 
@@ -638,11 +719,16 @@ export class UofTMapVis {
     if (this.groupBy === "faculty") {
       const fMap: Record<string, string> = {
         "APSC": "Engineering",
+        "ENG": "Engineering",
         "ARTSC": "Arts & Science",
+        "A&S": "Arts & Science",
         "FIS": "Information",
-        "FPEH": "Kinesiology & Phys. Ed",
+        "FPEH": "Kin & Phys. Ed",
         "MUSIC": "Music",
-        "ARCLA": "Daniels"
+        "MUS": "Music",
+        "ARCLA": "Daniels",
+        "ARC": "Daniels"
+
       };
       return fMap[cat] || cat;
     }
@@ -651,8 +737,17 @@ export class UofTMapVis {
 
   public getColor(cat: string): string {
     if (this.groupBy === "breadth") return this.brColors[cat] || "#888";
-    if (this.groupBy === "designator") return this.designatorColorScale(cat);
-    if (this.groupBy === "faculty") return this.facultyColorScale(cat);
+    if (this.groupBy === "designator") return this.designatorColors[cat] || this.designatorColorScale(cat);
+
+    const facultyMap: Record<string, string> = {
+      "A&S": "ARTSC"   ,
+      "ENG": "APSC"   ,
+      "ARC": "ARCLA"   ,
+      "MUS": "MUSIC" 
+    };
+
+
+    if (this.groupBy === "faculty") return this.facultyColorScale(facultyMap[cat] ?? cat);
     if (this.groupBy === "level") return this.levelColors[cat] || "#222222";
     return "#888";
   }
