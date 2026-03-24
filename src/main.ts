@@ -126,12 +126,20 @@ function setupChipInput(
   const container = document.getElementById(containerId)!;
   const chipsEl = container.querySelector('.chips')!;
   const inputEl = container.querySelector('input')!;
-  const suggEl = container.querySelector('.suggestions') as HTMLElement;
   const clearBtn = document.getElementById(clearBtnId)!;
 
-  document.body.appendChild(suggEl);
+  // FIX: Find the suggestion element by its exact ID so it survives HMR 
+  // (e.g., 'visible-desig-container' becomes 'visible-desig-suggestions')
+  const suggId = containerId.replace('-container', '-suggestions');
+  const suggEl = document.getElementById(suggId)!;
+
+  // FIX: Only move it to the body if it isn't already there
+  if (suggEl.parentElement !== document.body) {
+    document.body.appendChild(suggEl);
+  }
 
   let values = [...initialValues];
+  // ... rest of the function remains identical ...
 
   const render = () => {
     chipsEl.innerHTML = '';

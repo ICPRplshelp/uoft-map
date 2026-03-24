@@ -2,6 +2,7 @@ import * as d3 from "d3";
 import { type Course, type AcademicYear } from "./main";
 import type { BuildingRow } from "./types";
 import type { FeatureCollection, Polygon } from "geojson";
+import { MapZoomHandler } from "./MapZoomHandler";
 
 interface Building {
   code: string;
@@ -30,7 +31,7 @@ export class UofTMapVis {
   private tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
   private projection: d3.GeoProjection;
   private simulation: d3.Simulation<NodeData, undefined>;
-  private zoomBehavior: d3.ZoomBehavior<SVGSVGElement, unknown>;
+  private zoomHandler: MapZoomHandler;  
   private cameraBoundary: FeatureCollection<Polygon>;
 
   private mapData: FeatureCollection;
@@ -92,11 +93,14 @@ export class UofTMapVis {
     const parent = document.getElementById(parentElementId);
     if (parent) parent.style.position = "relative";
 
+    const parentSelection = d3.select(`#${parentElementId}`);
+    parentSelection.selectAll("canvas").remove();
+    parentSelection.selectAll("svg").remove();
+
     const width = parent?.clientWidth || window.innerWidth;
     const height = parent?.clientHeight || window.innerHeight;
 
-    this.canvas = d3
-      .select(`#${parentElementId}`)
+    this.canvas = parentSelection
       .append("canvas")
       .attr("width", width)
       .attr("height", height)
@@ -133,7 +137,6 @@ export class UofTMapVis {
     feMerge.append("feMergeNode").attr("in", "coloredBlur");
     feMerge.append("feMergeNode").attr("in", "SourceGraphic");
 
-    // Disable pointer events on the container so the SVG captures EVERYTHING smoothly
     this.container = this.svg.append("g").style("pointer-events", "none");
     this.container.append("g").attr("class", "bubble-layer");
 
@@ -185,38 +188,20 @@ export class UofTMapVis {
         d3.forceCollide<NodeData>((d) => d.radius + 1).iterations(2),
       );
 
-    this.zoomBehavior = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 8])
-      .translateExtent([[-width, -height], [width * 2, height * 2]])
-      .on("zoom", (e) => {
-        this.currentTransform = e.transform;
-        this.container.attr("transform", e.transform);
-        this.canvas.style(
-          "transform",
-          `translate(${e.transform.x}px, ${e.transform.y}px) scale(${e.transform.k})`,
-        );
-        this.canvas.style("transform-origin", "0 0");
+    this.zoomHandler = new MapZoomHandler({
+      svg: this.svg,
+      container: this.container,
+      canvas: this.canvas,
+      getWidth: () => document.getElementById(this.parentElementId)?.clientWidth || window.innerWidth,
+      getHeight: () => document.getElementById(this.parentElementId)?.clientHeight || window.innerHeight,
+      onZoomTransform: (t) => { this.currentTransform = t; },
+      hasHoveredNode: () => this.hoveredNode !== null,
+      updateLabels: () => this.updateLabels(),
+      updateTooltipPosition: () => this.updateTooltipPosition() 
+    });
 
-        this.updateLabels();
-        
-        if (this.hoveredNode) {
-            this.updateTooltipPosition();
-        }
-      })
-      .on("start", () => {
-        this.svg.classed("grabbing", true);
-        this.svg.style("cursor", "grabbing");
-        window.dispatchEvent(new Event('close-all-suggestions')); 
-      })
-      .on("end", () => {
-        this.svg.classed("grabbing", false);
-        this.svg.style("cursor", null); // Reset to map default
-      });
+    this.svg.call(this.zoomHandler.behavior);
 
-    this.svg.call(this.zoomBehavior);
-
-    // --- ENHANCED PROXIMITY HOVER LOGIC ---
     this.svg.on("mousemove", (e) => {
       if (!this.simulation) return;
       
@@ -342,17 +327,13 @@ export class UofTMapVis {
 
     this.projection.fitSize([width, height], this.cameraBoundary);
     
-    this.zoomBehavior.translateExtent([[-width, -height], [width * 2, height * 2]]);
-    
+    this.zoomHandler.updateExtents();    
     this.drawMap();
     this.wrangleData(); 
   }
 
   public resetZoom() {
-    this.svg
-      .transition()
-      .duration(750)
-      .call(this.zoomBehavior.transform, d3.zoomIdentity);
+    this.zoomHandler.resetZoom();
   }
 
   private drawMap() {
