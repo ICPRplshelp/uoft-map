@@ -104,7 +104,7 @@ function updateLegend() {
   
   container.innerHTML = items.map(item => {
     // Dynamic contrast border matching the chip inputs
-    const isLightColor = mapVis.getContrast(item.color) === "black";
+    const isLightColor = true;  // mapVis.getContrast(item.color) === "black";
     const borderStyle = isLightColor ? "border: 1px solid #000;" : "border: 1px solid rgba(0,0,0,0.1);";
     
     return `
@@ -148,7 +148,7 @@ function setupChipInput(
       let colorHtml = '';
       if (getColor) {
         const color = getColor(val);
-        const isLightColor = mapVis.getContrast(color) === "black";
+        const isLightColor = true; // mapVis.getContrast(color) === "black";
         const borderStyle = isLightColor ? "border: 1px solid #000;" : "border: 1px solid rgba(0,0,0,0.1);";
         colorHtml = `<span class="chip-color-dot" style="background-color: ${color}; ${borderStyle}"></span>`;
       }

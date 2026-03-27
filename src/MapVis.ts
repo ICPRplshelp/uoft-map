@@ -78,14 +78,14 @@ export class UofTMapVis {
     "5": "#6c6ce8",
   };
   private designatorColors: Record<string, string> = {
-    "MAT": "#60daff",
+    "MAT": "#51a3d6",
     "STA": "#ee7b33",
     "CSC": "#9541e9",
     "PHY": "#7b95f3",
     "BIO": "#9dff51",
     "AST": "#3b38ff",
     "ENG": "#dc405d",
-    "PHL": "#56c4f7",
+    "PHL": "#887b44",
     "LIN": "#e1ffff",
     "ECO": "#fabebe",
     "SOC": "#d0b442",
